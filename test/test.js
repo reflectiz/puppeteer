@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 const fs = require('fs');
+const os = require('os');
 const rm = require('rimraf').sync;
 const path = require('path');
 const {helper} = require('../lib/helper');
 if (process.env.COVERAGE)
   helper.recordPublicAPICoverage();
+const mkdtempAsync = helper.promisify(fs.mkdtemp);
+const TMP_FOLDER = path.join(os.tmpdir(), 'pptr_tmp_folder-');
 
 const PROJECT_ROOT = fs.existsSync(path.join(__dirname, '..', 'package.json')) ? path.join(__dirname, '..') : path.join(__dirname, '..', '..');
 
@@ -54,7 +57,7 @@ const defaultBrowserOptions = {
   args: ['--no-sandbox', '--disable-dev-shm-usage']
 };
 
-const timeout = slowMo ?  0 : 10 * 1000;
+const timeout = slowMo ? 0 : 10 * 1000;
 let parallel = 1;
 if (process.env.PPTR_PARALLEL_TESTS)
   parallel = parseInt(process.env.PPTR_PARALLEL_TESTS.trim(), 10);
@@ -80,14 +83,18 @@ if (fs.existsSync(OUTPUT_DIR))
 
 beforeAll(async state  => {
   const assetsPath = path.join(__dirname, 'assets');
+  const cachedPath = path.join(__dirname, 'assets', 'cached');
+
   const port = 8907 + state.parallelIndex * 2;
   state.server = await SimpleServer.create(assetsPath, port);
+  state.server.enableHTTPCache(cachedPath);
   state.server.PREFIX = `http://localhost:${port}`;
   state.server.CROSS_PROCESS_PREFIX = `http://127.0.0.1:${port}`;
   state.server.EMPTY_PAGE = `http://localhost:${port}/empty.html`;
 
   const httpsPort = port + 1;
   state.httpsServer = await SimpleServer.createHTTPS(assetsPath, httpsPort);
+  state.httpsServer.enableHTTPCache(cachedPath);
   state.httpsServer.PREFIX = `https://localhost:${httpsPort}`;
   state.httpsServer.CROSS_PROCESS_PREFIX = `https://127.0.0.1:${httpsPort}`;
   state.httpsServer.EMPTY_PAGE = `https://localhost:${httpsPort}/empty.html`;
@@ -133,7 +140,7 @@ describe('Puppeteer', function() {
       expect(waitError.message.startsWith('Failed to launch chrome! spawn random-invalid-path ENOENT')).toBe(true);
     });
     it('userDataDir option', async({server}) => {
-      const userDataDir = fs.mkdtempSync(path.join(__dirname, 'test-user-data-dir'));
+      const userDataDir = await mkdtempAsync(TMP_FOLDER);
       const options = Object.assign({userDataDir}, defaultBrowserOptions);
       const browser = await puppeteer.launch(options);
       expect(fs.readdirSync(userDataDir).length).toBeGreaterThan(0);
@@ -142,7 +149,7 @@ describe('Puppeteer', function() {
       rm(userDataDir);
     });
     it('userDataDir argument', async({server}) => {
-      const userDataDir = fs.mkdtempSync(path.join(__dirname, 'test-user-data-dir'));
+      const userDataDir = await mkdtempAsync(TMP_FOLDER);
       const options = Object.assign({}, defaultBrowserOptions);
       options.args = [`--user-data-dir=${userDataDir}`].concat(options.args);
       const browser = await puppeteer.launch(options);
@@ -152,7 +159,7 @@ describe('Puppeteer', function() {
       rm(userDataDir);
     });
     it('userDataDir option should restore state', async({server}) => {
-      const userDataDir = fs.mkdtempSync(path.join(__dirname, 'test-user-data-dir'));
+      const userDataDir = await mkdtempAsync(TMP_FOLDER);
       const options = Object.assign({userDataDir}, defaultBrowserOptions);
       const browser = await puppeteer.launch(options);
       const page = await browser.newPage();
@@ -169,7 +176,7 @@ describe('Puppeteer', function() {
     });
     // @see https://github.com/GoogleChrome/puppeteer/issues/1537
     xit('userDataDir option should restore cookies', async({server}) => {
-      const userDataDir = fs.mkdtempSync(path.join(__dirname, 'test-user-data-dir'));
+      const userDataDir = await mkdtempAsync(TMP_FOLDER);
       const options = Object.assign({userDataDir}, defaultBrowserOptions);
       const browser = await puppeteer.launch(options);
       const page = await browser.newPage();
@@ -185,7 +192,7 @@ describe('Puppeteer', function() {
       rm(userDataDir);
     });
     xit('headless should be able to read cookies written by headful', async({server}) => {
-      const userDataDir = fs.mkdtempSync(path.join(__dirname, 'test-user-data-dir'));
+      const userDataDir = await mkdtempAsync(TMP_FOLDER);
       const options = Object.assign({userDataDir}, defaultBrowserOptions);
       // Write a cookie in headful chrome
       options.headless = false;
@@ -2663,8 +2670,40 @@ describe('Page', function() {
       expect(responses[0].url()).toBe(server.EMPTY_PAGE);
       expect(responses[0].status()).toBe(200);
       expect(responses[0].ok()).toBe(true);
+      expect(responses[0].fromCache()).toBe(false);
+      expect(responses[0].fromServiceWorker()).toBe(false);
       expect(responses[0].request()).toBeTruthy();
     });
+
+    it('Response.fromCache()', async({page, server}) => {
+      const responses = new Map();
+      page.on('response', r => responses.set(r.url().split('/').pop(), r));
+
+      // Load and re-load to make sure it's cached.
+      await page.goto(server.PREFIX + '/cached/one-style.html');
+      await page.reload();
+
+      expect(responses.size).toBe(2);
+      expect(responses.get('one-style.html').status()).toBe(304);
+      expect(responses.get('one-style.html').fromCache()).toBe(false);
+      expect(responses.get('one-style.css').status()).toBe(200);
+      expect(responses.get('one-style.css').fromCache()).toBe(true);
+    });
+    it('Response.fromServiceWorker', async({page, server}) => {
+      const responses = new Map();
+      page.on('response', r => responses.set(r.url().split('/').pop(), r));
+
+      // Load and re-load to make sure serviceworker is installed and running.
+      await page.goto(server.PREFIX + '/serviceworkers/fetch/sw.html', {waitUntil: 'networkidle2'});
+      await page.reload();
+
+      expect(responses.size).toBe(2);
+      expect(responses.get('sw.html').status()).toBe(200);
+      expect(responses.get('sw.html').fromServiceWorker()).toBe(true);
+      expect(responses.get('style.css').status()).toBe(200);
+      expect(responses.get('style.css').fromServiceWorker()).toBe(true);
+    });
+
     it('Page.Events.Response should provide body', async({page, server}) => {
       let response = null;
       page.on('response', r => response = r);
@@ -3527,13 +3566,13 @@ describe('Page', function() {
     it('should report when a service worker is created and destroyed', async({page, server, browser}) => {
       await page.goto(server.EMPTY_PAGE);
       const createdTarget = new Promise(fulfill => browser.once('targetcreated', target => fulfill(target)));
-      const registration = await page.evaluateHandle(() => navigator.serviceWorker.register('sw.js'));
+      await page.goto(server.PREFIX + '/serviceworkers/empty/sw.html');
 
       expect((await createdTarget).type()).toBe('service_worker');
-      expect((await createdTarget).url()).toBe(server.PREFIX + '/sw.js');
+      expect((await createdTarget).url()).toBe(server.PREFIX + '/serviceworkers/empty/sw.js');
 
       const destroyedTarget = new Promise(fulfill => browser.once('targetdestroyed', target => fulfill(target)));
-      await page.evaluate(registration => registration.unregister(), registration);
+      await page.evaluate(() => window.registrationPromise.then(registration => registration.unregister()));
       expect(await destroyedTarget).toBe(await createdTarget);
     });
     it('should report when a target url changes', async({page, server, browser}) => {
