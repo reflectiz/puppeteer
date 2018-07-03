@@ -5,6 +5,7 @@
       <change beforePath="$PROJECT_DIR$/.eslintignore" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.eslintrc.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/Browser.js" beforeDir="false" afterPath="$PROJECT_DIR$/lib/Browser.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -70,11 +71,20 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Browser.js" pinned="false" current-in-tab="true">
+      <file leaf-file-name="Browser.js" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lib/Browser.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="364">
-              <caret line="111" column="31" selection-start-line="111" selection-start-column="10" selection-end-line="111" selection-end-column="31" />
+            <state relative-caret-position="504">
+              <caret line="116" column="33" selection-start-line="116" selection-start-column="33" selection-end-line="116" selection-end-column="33" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="package.json" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/package.json">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="56">
+              <caret line="2" column="22" selection-start-line="2" selection-start-column="22" selection-end-line="2" selection-end-column="22" />
             </state>
           </provider>
         </entry>
@@ -131,6 +141,7 @@
       <list>
         <option value="$PROJECT_DIR$/lib/ElementHandle.js" />
         <option value="$PROJECT_DIR$/lib/Browser.js" />
+        <option value="$PROJECT_DIR$/package.json" />
       </list>
     </option>
   </component>
@@ -220,12 +231,12 @@
       <workItem from="1527692339622" duration="4016000" />
       <workItem from="1527775523647" duration="2481000" />
       <workItem from="1528033081484" duration="1711000" />
-      <workItem from="1530618372361" duration="567000" />
+      <workItem from="1530618372361" duration="616000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="8775000" />
+    <option name="totallyTimeSpent" value="8824000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="109" y="-8" width="1819" height="1216" extended-state="6" />
@@ -552,8 +563,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/lib/Browser.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="364">
-          <caret line="111" column="31" selection-start-line="111" selection-start-column="10" selection-end-line="111" selection-end-column="31" />
+        <state relative-caret-position="504">
+          <caret line="116" column="33" selection-start-line="116" selection-start-column="33" selection-end-line="116" selection-end-column="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/package.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="56">
+          <caret line="2" column="22" selection-start-line="2" selection-start-column="22" selection-end-line="2" selection-end-column="22" />
         </state>
       </provider>
     </entry>
